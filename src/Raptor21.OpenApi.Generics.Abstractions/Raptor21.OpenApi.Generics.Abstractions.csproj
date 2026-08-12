@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+        <RootNamespace>Raptor21.OpenApi.Generics</RootNamespace>
+        <AssemblyName>Raptor21.OpenApi.Generics.Abstractions</AssemblyName>
+    </PropertyGroup>
+
+    <PropertyGroup Label="Package">
+        <IsPackable>true</IsPackable>
+        <PackageId>Raptor21.OpenApi.Generics.Abstractions</PackageId>
+        <Description>The metadata protocol that lets generic response contracts survive an OpenAPI document: vendor extension keys, envelope and container descriptors, and the attributes that declare them.</Description>
+    </PropertyGroup>
+
+</Project>

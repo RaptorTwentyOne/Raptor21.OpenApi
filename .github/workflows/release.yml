@@ -1,0 +1,89 @@
+name: Release
+
+# The tag is the version. Nothing else is: Directory.Build.props carries a development version so a local
+# `dotnet pack` produces something installable, and the tag overrides it here. That way a published package
+# can always be traced back to exactly one commit, and a version can never be published twice by accident
+# from a moving branch.
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+  # Trusted publishing: the job proves its identity to nuget.org with a GitHub OIDC token and is handed a
+  # short-lived key. No long-lived API key is stored in this repository.
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    # Required by the nuget.org trusted-publishing policy, which will not mint a token for a job that runs
+    # outside the environment it names. It is also the boundary worth having: publishing is the one step
+    # here that cannot be undone, so it belongs somewhere approval rules can be attached.
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Source Link embeds the commit, which needs real history rather than a shallow clone.
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          # Both, because the libraries multi-target net8.0 alongside net10.0 and netstandard2.0.
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Derive version from tag
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+
+          # nuget.org is permanent: a version published once can be unlisted but never replaced. A malformed
+          # tag must stop here, not become a package nobody can take back. The trigger pattern already
+          # rejects the obvious shapes; this catches the rest, such as a fourth part.
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag '$GITHUB_REF_NAME' is not a version. Expected vMAJOR.MINOR.PATCH[-suffix], e.g. v0.1.0-preview.2."
+            exit 1
+          fi
+
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          echo "Publishing $version"
+
+      - name: Build
+        run: dotnet build -c Release -p:Version=${{ steps.version.outputs.value }}
+
+      - name: Test
+        run: dotnet test -c Release --no-build --verbosity normal
+
+      - name: Pack
+        run: dotnet pack -c Release --no-build -o artifacts -p:Version=${{ steps.version.outputs.value }}
+
+      - name: Authenticate to NuGet (Trusted Publishing)
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      - name: Push to NuGet
+        # Symbol packages travel automatically: pushing a .nupkg also pushes the .snupkg sitting beside it.
+        # --skip-duplicate makes a re-run of a partly-failed release safe instead of fatal.
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      - name: Attach packages to the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/*.nupkg
+            artifacts/*.snupkg
+          generate_release_notes: true
+          # SemVer says a hyphen opens the pre-release field, so v1.2.3-preview.1 is a pre-release and
+          # v1.2.3 is not. The action does not infer this from the tag, and an unmarked pre-release shows
+          # up as "Latest" on the repository's front page — which is the version people then install.
+          prerelease: ${{ contains(github.ref_name, '-') }}

@@ -1,0 +1,47 @@
+name: CI
+
+# Packing is what release does, so packing is what CI checks. A build that compiles but cannot produce a
+# package fails here rather than halfway through a tagged release, when the tag already exists.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          # Both, because the libraries multi-target net8.0 alongside net10.0 and netstandard2.0.
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Test
+        # The test project set is empty today. --no-build keeps this honest: it reports "no test projects"
+        # rather than silently passing, and starts working the moment a test project is added.
+        run: dotnet test -c Release --no-build --verbosity normal
+
+      - name: Pack
+        run: dotnet pack -c Release --no-build -o artifacts
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: artifacts/*
+          if-no-files-found: error

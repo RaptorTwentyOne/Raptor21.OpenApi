@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+        <RootNamespace>Raptor21.OpenApi.Generics.AspNetCore</RootNamespace>
+        <AssemblyName>Raptor21.OpenApi.Generics.AspNetCore</AssemblyName>
+    </PropertyGroup>
+
+    <PropertyGroup Label="Package">
+        <IsPackable>true</IsPackable>
+        <PackageId>Raptor21.OpenApi.Generics.AspNetCore</PackageId>
+        <Description>Projection for ASP.NET Core: writes generic response contract identity into the OpenAPI document Swashbuckle generates, so client generators can reconstruct the envelope instead of redefining it.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="10.2.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Raptor21.OpenApi.Generics.Abstractions\Raptor21.OpenApi.Generics.Abstractions.csproj" />
+    </ItemGroup>
+
+</Project>

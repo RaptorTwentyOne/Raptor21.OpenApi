@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <RootNamespace>Raptor21.OpenApi.Generics.Cli</RootNamespace>
+        <AssemblyName>raptor21-openapi</AssemblyName>
+    </PropertyGroup>
+
+    <PropertyGroup Label="Package">
+        <IsPackable>true</IsPackable>
+        <PackageId>Raptor21.OpenApi.Generics.Cli</PackageId>
+        <PackAsTool>true</PackAsTool>
+        <ToolCommandName>raptor21-openapi</ToolCommandName>
+        <Description>Command line generator that turns an OpenAPI document carrying generic contract metadata into a Refit client with its generic envelopes intact.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Raptor21.OpenApi.Generics.CodeGen\Raptor21.OpenApi.Generics.CodeGen.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+        <RootNamespace>Raptor21.OpenApi.Generics.CodeGen</RootNamespace>
+        <AssemblyName>Raptor21.OpenApi.Generics.CodeGen</AssemblyName>
+    </PropertyGroup>
+
+    <PropertyGroup Label="Package">
+        <IsPackable>true</IsPackable>
+        <PackageId>Raptor21.OpenApi.Generics.CodeGen</PackageId>
+        <Description>Reconstruction: reads an OpenAPI document carrying generic contract metadata and emits Refit interfaces and models with the generic envelopes restored, instead of redefining them as new types.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="NJsonSchema.CodeGeneration.CSharp" Version="11.6.1" />
+        <PackageReference Include="NSwag.Core" Version="14.7.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Raptor21.OpenApi.Generics.Abstractions\Raptor21.OpenApi.Generics.Abstractions.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,19 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Raptor21.OpenApi.Generics.Abstractions/Raptor21.OpenApi.Generics.Abstractions.csproj" />
+    <Project Path="src/Raptor21.OpenApi.Generics.AspNetCore/Raptor21.OpenApi.Generics.AspNetCore.csproj" />
+    <Project Path="src/Raptor21.OpenApi.Generics.CodeGen/Raptor21.OpenApi.Generics.CodeGen.csproj" />
+    <Project Path="src/Raptor21.OpenApi.Generics.Cli/Raptor21.OpenApi.Generics.Cli.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Raptor21.OpenApi.Generics.Sample/Raptor21.OpenApi.Generics.Sample.csproj" />
+  </Folder>
+</Solution>
