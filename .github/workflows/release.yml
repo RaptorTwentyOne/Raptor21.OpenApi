@@ -7,6 +7,14 @@ name: Release
 on:
   push:
     tags: ['v*.*.*']
+  # npm-only re-run for a tag whose NuGet packages are already out (a failed npm job must never require
+  # re-publishing NuGet — that is permanent). Publishes the npm front door from the tag's checkout.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to publish the npm package from, e.g. v0.2.0-preview.2'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -17,6 +25,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
 
     # Required by the nuget.org trusted-publishing policy, which will not mint a token for a job that runs
     # outside the environment it names. It is also the boundary worth having: publishing is the one step
@@ -93,25 +102,44 @@ jobs:
   npm:
     runs-on: ubuntu-latest
     needs: publish
+    # On a tag push it follows a successful NuGet publish; on workflow_dispatch it runs alone.
+    if: ${{ always() && (needs.publish.result == 'success' || github.event_name == 'workflow_dispatch') }}
     environment: production
     permissions:
       contents: read
-      # npm provenance (and trusted publishing, once the package is configured for it on npmjs.com)
+      # Trusted publishing: npm exchanges the GitHub OIDC token for a short-lived publish credential; the
+      # trusted publisher registered on npmjs.com names this repository, this file and this environment.
       id-token: write
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # Node 24 ships npm 11; trusted publishing needs npm >= 11.5.1. Node 22's npm 10 silently skips the
+          # OIDC exchange and the publish fails as an anonymous 404.
+          node-version: 24
           registry-url: https://registry.npmjs.org
+
+      - name: Resolve the version from the tag
+        run: |
+          tag="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          version="${tag#v}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$tag' is not a release tag."; exit 1
+          fi
+          case "$version" in *-*) dist=preview ;; *) dist=latest ;; esac
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "DIST_TAG=$dist" >> "$GITHUB_ENV"
+          npm --version
 
       - name: Stamp the tag version into package.json
         working-directory: npm
-        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+        run: npm version "$VERSION" --no-git-tag-version --allow-same-version
 
-      - name: Smoke-test the bin against the just-published tool
+      - name: Smoke-test the bin against the published tool
         working-directory: npm
         # nuget.org indexes a new version within minutes; retry so a fast runner does not fail on timing.
         run: |
@@ -123,16 +151,6 @@ jobs:
 
       - name: Publish to npm
         working-directory: npm
-        # Trusted publishing, exactly as the sibling Raptor21.SAP.RFC packages: the job proves its identity
-        # with the GitHub OIDC token (id-token: write) and npmjs.com hands it a short-lived credential for
-        # @raptortwentyone/openapi. No npm token is stored anywhere; --provenance attaches the build
-        # attestation. The trusted publisher (this repository, this workflow file, environment production)
-        # is registered on the package's Settings → Trusted publisher page.
-        # Same rule as the NuGet side: a version with a suffix is a pre-release and takes the "preview"
-        # dist-tag, a bare version takes "latest" (npm refuses a pre-release without an explicit tag).
-        run: |
-          case "${GITHUB_REF_NAME#v}" in
-            *-*) tag=preview ;;
-            *)   tag=latest ;;
-          esac
-          npm publish --provenance --access public --tag "$tag"
+        # Pre-releases take the "preview" dist-tag, a bare version "latest" (npm refuses a pre-release
+        # without an explicit tag). Provenance is attached automatically under trusted publishing.
+        run: npm publish --access public --tag "$DIST_TAG"
