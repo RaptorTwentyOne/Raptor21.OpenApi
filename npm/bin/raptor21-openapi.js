@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @raptor21/openapi — npm front door for the Raptor21.OpenApi generator.
+// @raptortwentyone/openapi — npm front door for the Raptor21.OpenApi generator.
 //
 // The generator itself is a .NET tool (Raptor21.OpenApi.Generics.Cli on nuget.org). This script installs
 // that tool, at exactly this package's version, into a directory owned by this package the first time it

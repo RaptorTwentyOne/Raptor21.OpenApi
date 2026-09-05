@@ -1,4 +1,4 @@
-# @raptor21/openapi
+# @raptortwentyone/openapi
 
 The [Raptor21.OpenApi](https://github.com/RaptorTwentyOne/Raptor21.OpenApi) generator as an npm
 command. It produces API clients that keep generic response envelopes (`BaseResponse<T>`, `Page<T>`)
@@ -20,7 +20,7 @@ A .NET SDK 8.0 or later on `PATH` (`dotnet --version` works). Get it from https:
 ## Use
 
 ```bash
-pnpm add -D @raptor21/openapi      # or npm / yarn
+pnpm add -D @raptortwentyone/openapi      # or npm / yarn
 ```
 
 ```jsonc
@@ -57,7 +57,7 @@ configureApiClients({ baseUrl: '', fetch: myFetchWithCsrfAndAuth })
 | Variable | Effect |
 |---|---|
 | `RAPTOR21_OPENAPI_VERSION` | Use another tool version than the package's own (escape hatch). |
-| `RAPTOR21_OPENAPI_TOOL_DIR` | Where the tool is installed (default `node_modules/@raptor21/openapi/.tool`). |
+| `RAPTOR21_OPENAPI_TOOL_DIR` | Where the tool is installed (default `node_modules/@raptortwentyone/openapi/.tool`). |
 
 ## Versioning
 

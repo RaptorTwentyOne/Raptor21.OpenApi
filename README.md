@@ -111,7 +111,7 @@ From a JavaScript project, use the npm front door instead — it installs the sa
 its own version, on first run (needs a .NET SDK on PATH) and forwards every flag:
 
 ```bash
-pnpm add -D @raptor21/openapi
+pnpm add -D @raptortwentyone/openapi
 ```
 
 ```jsonc
@@ -259,7 +259,7 @@ git push origin v0.1.0-preview.2
 ```
 
 That triggers `.github/workflows/release.yml`, which builds, packs at the tagged version, pushes the
-packages to nuget.org, opens a GitHub release with them attached, and then publishes `@raptor21/openapi`
+packages to nuget.org, opens a GitHub release with them attached, and then publishes `@raptortwentyone/openapi`
 to npm at the same version (the `npm` job needs either an `NPM_TOKEN` secret or a trusted publisher
 configured for the package on npmjs.com; without both it skips with a warning). A tag carrying a suffix
 (`-preview.2`, `-rc.1`) is published as a prerelease.

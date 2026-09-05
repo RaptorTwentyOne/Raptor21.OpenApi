@@ -88,7 +88,7 @@ jobs:
           # up as "Latest" on the repository's front page — which is the version people then install.
           prerelease: ${{ contains(github.ref_name, '-') }}
 
-  # The npm front door (@raptor21/openapi) carries the same version and installs the .NET tool published
+  # The npm front door (@raptortwentyone/openapi) carries the same version and installs the .NET tool published
   # above on first use, so it must never exist for a version the tool does not. Hence `needs: publish`.
   npm:
     runs-on: ubuntu-latest
@@ -123,14 +123,9 @@ jobs:
 
       - name: Publish to npm
         working-directory: npm
-        # Trusted publishing needs no token once the package's trusted publisher is set on npmjs.com; until
-        # then an automation token in the NPM_TOKEN secret is used. Neither present → skipped with a warning,
-        # so the NuGet release above stays valid on its own.
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "::warning::NPM_TOKEN is not set and no trusted publisher is configured; npm publish skipped."
-            exit 0
-          fi
-          npm publish --provenance --access public
+        # Trusted publishing, exactly as the sibling Raptor21.SAP.RFC packages: the job proves its identity
+        # with the GitHub OIDC token (id-token: write) and npmjs.com hands it a short-lived credential for
+        # @raptortwentyone/openapi. No npm token is stored anywhere; --provenance attaches the build
+        # attestation. The trusted publisher (this repository, this workflow file, environment production)
+        # is registered on the package's Settings → Trusted publisher page.
+        run: npm publish --provenance --access public
