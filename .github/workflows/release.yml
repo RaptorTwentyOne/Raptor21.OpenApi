@@ -128,4 +128,11 @@ jobs:
         # @raptortwentyone/openapi. No npm token is stored anywhere; --provenance attaches the build
         # attestation. The trusted publisher (this repository, this workflow file, environment production)
         # is registered on the package's Settings → Trusted publisher page.
-        run: npm publish --provenance --access public
+        # Same rule as the NuGet side: a version with a suffix is a pre-release and takes the "preview"
+        # dist-tag, a bare version takes "latest" (npm refuses a pre-release without an explicit tag).
+        run: |
+          case "${GITHUB_REF_NAME#v}" in
+            *-*) tag=preview ;;
+            *)   tag=latest ;;
+          esac
+          npm publish --provenance --access public --tag "$tag"
