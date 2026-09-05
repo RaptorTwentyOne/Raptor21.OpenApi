@@ -868,21 +868,24 @@ public sealed class TypeScriptClientGenerator
 
     private static string? ExtString(JsonSchema schema, string key) => Ext(schema, key)?.ToString();
 
-    private static readonly Dictionary<string, Template> TemplateCache = new(StringComparer.Ordinal);
+    // Shared across generator instances and threads: the test suite runs its classes in parallel, and a plain
+    // Dictionary corrupted itself under that load on CI ("Operations that change non-concurrent collections
+    // must have exclusive access"). A parsed Scriban Template is immutable and renders through its own
+    // TemplateContext, so sharing the parsed object is safe; only the cache itself needed to be.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Template> TemplateCache = new(StringComparer.Ordinal);
 
     private static string Render(string templateName, ScriptObject model)
     {
-        if (!TemplateCache.TryGetValue(templateName, out var template))
+        var template = TemplateCache.GetOrAdd(templateName, static name =>
         {
             var assembly = typeof(TypeScriptClientGenerator).Assembly;
             var resource = assembly.GetManifestResourceNames()
-                .First(n => n.Equals(templateName, StringComparison.Ordinal) || n.EndsWith("." + templateName, StringComparison.Ordinal));
+                .First(n => n.Equals(name, StringComparison.Ordinal) || n.EndsWith("." + name, StringComparison.Ordinal));
 
             using var stream = assembly.GetManifestResourceStream(resource)!;
             using var reader = new System.IO.StreamReader(stream);
-            template = Template.Parse(reader.ReadToEnd());
-            TemplateCache[templateName] = template;
-        }
+            return Template.Parse(reader.ReadToEnd());
+        });
 
         var context = new TemplateContext { MemberRenamer = member => member.Name };
         context.PushGlobal(model);
