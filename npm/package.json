@@ -1,6 +1,6 @@
 {
   "name": "@raptortwentyone/openapi",
-  "version": "0.2.0-preview.2",
+  "version": "0.2.0",
   "description": "Runs the Raptor21.OpenApi generator (C# Refit / TypeScript fetch + TanStack Query clients that keep generic response envelopes intact) from npm scripts. Installs the matching .NET tool on first use.",
   "license": "MIT",
   "repository": {

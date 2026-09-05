@@ -254,8 +254,8 @@ The git tag is the version. `Directory.Build.props` carries a development versio
 package traces back to exactly one commit.
 
 ```bash
-git tag v0.1.0-preview.2
-git push origin v0.1.0-preview.2
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 That triggers `.github/workflows/release.yml`, which builds, packs at the tagged version, pushes the

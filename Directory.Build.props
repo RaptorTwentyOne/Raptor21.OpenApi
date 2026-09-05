@@ -26,7 +26,8 @@
 
              0.2.0-preview.1 adds the TypeScript emitter (types/client/queries), the request-body and
              multipart conventions, the x-raptor21-version protocol marker and the test project. -->
-        <VersionSuffix Condition="'$(VersionSuffix)' == ''">preview.2</VersionSuffix>
+        <!-- 0.2.0 is the first stable release (2026-09-05): no suffix. A pre-release cycle sets one again here. -->
+        <VersionSuffix Condition="'$(VersionSuffix)' == ''"></VersionSuffix>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageProjectUrl>https://github.com/RaptorTwentyOne/Raptor21.OpenApi</PackageProjectUrl>
