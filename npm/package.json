@@ -1,0 +1,25 @@
+{
+  "name": "@raptor21/openapi",
+  "version": "0.0.0-dev",
+  "description": "Runs the Raptor21.OpenApi generator (C# Refit / TypeScript fetch + TanStack Query clients that keep generic response envelopes intact) from npm scripts. Installs the matching .NET tool on first use.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RaptorTwentyOne/Raptor21.OpenApi.git",
+    "directory": "npm"
+  },
+  "homepage": "https://github.com/RaptorTwentyOne/Raptor21.OpenApi#readme",
+  "bugs": "https://github.com/RaptorTwentyOne/Raptor21.OpenApi/issues",
+  "keywords": ["openapi", "swagger", "codegen", "typescript", "tanstack-query", "refit", "dotnet", "generics"],
+  "type": "module",
+  "bin": {
+    "raptor21-openapi": "bin/raptor21-openapi.js"
+  },
+  "files": ["bin", "README.md"],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

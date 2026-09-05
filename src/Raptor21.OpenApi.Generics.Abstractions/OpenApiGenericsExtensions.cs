@@ -41,4 +41,14 @@ public static class OpenApiGenericsExtensions
     /// standalone generated model. Boolean.
     /// </summary>
     public const string IgnoreModel = "x-ignore-model";
+
+    /// <summary>
+    /// Document-level marker, written on <c>info</c>, naming the version of this metadata protocol the
+    /// document was projected with. String, e.g. <c>"1"</c>. A generator refuses a major version it does not
+    /// understand instead of silently producing a wrong client; a document without it is read as version 1.
+    /// </summary>
+    public const string Version = "x-raptor21-version";
+
+    /// <summary>The protocol version this library projects and reconstructs. See <c>docs/Raptor21-Generics-Extensions-v1.md</c>.</summary>
+    public const string CurrentVersion = "1";
 }

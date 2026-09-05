@@ -14,7 +14,7 @@ public enum InterfaceGrouping
 }
 
 /// <summary>Controls generation of a Refit client from an OpenAPI document.</summary>
-public sealed class RefitClientGeneratorSettings
+public sealed class RefitClientGeneratorSettings : ClientGeneratorSettingsBase
 {
     /// <summary>Namespace for the generated interfaces and models.</summary>
     public string Namespace { get; set; } = "GeneratedClient";
@@ -44,26 +44,6 @@ public sealed class RefitClientGeneratorSettings
 
     /// <summary>Operation tags to skip entirely, such as internal diagnostics endpoints.</summary>
     public ISet<string> ExcludedTags { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// Maps a type name found in <c>x-api-wrapper-type</c> or <c>x-data-container-type</c> onto the type the
-    /// generated client should use.
-    /// </summary>
-    /// <remarks>
-    /// The projected name is whatever the producing ecosystem calls the contract, which is not necessarily
-    /// what the consumer calls it — a document written by a Java service names Java types, and a C# consumer
-    /// binding to its own port of the same contract needs to say so. Unmapped names are used as written.
-    /// </remarks>
-    public IDictionary<string, string> TypeMappings { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
-
-    /// <summary>
-    /// JSON property name carrying the envelope's payload. Defaults to <c>data</c>.
-    /// </summary>
-    /// <remarks>
-    /// The document says a schema is an envelope but not which of its properties is the cargo, so
-    /// reconstruction needs to be told. Every envelope in a document is expected to agree on this.
-    /// </remarks>
-    public string PayloadPropertyName { get; set; } = "data";
 
     /// <summary>
     /// Prepended to every route in the generated attributes.

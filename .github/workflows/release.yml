@@ -87,3 +87,50 @@ jobs:
           # v1.2.3 is not. The action does not infer this from the tag, and an unmarked pre-release shows
           # up as "Latest" on the repository's front page — which is the version people then install.
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+  # The npm front door (@raptor21/openapi) carries the same version and installs the .NET tool published
+  # above on first use, so it must never exist for a version the tool does not. Hence `needs: publish`.
+  npm:
+    runs-on: ubuntu-latest
+    needs: publish
+    environment: production
+    permissions:
+      contents: read
+      # npm provenance (and trusted publishing, once the package is configured for it on npmjs.com)
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Stamp the tag version into package.json
+        working-directory: npm
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version
+
+      - name: Smoke-test the bin against the just-published tool
+        working-directory: npm
+        # nuget.org indexes a new version within minutes; retry so a fast runner does not fail on timing.
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if node bin/raptor21-openapi.js --help > /dev/null; then exit 0; fi
+            echo "tool not installable yet (attempt $attempt), waiting 60s"; sleep 60
+          done
+          exit 1
+
+      - name: Publish to npm
+        working-directory: npm
+        # Trusted publishing needs no token once the package's trusted publisher is set on npmjs.com; until
+        # then an automation token in the NPM_TOKEN secret is used. Neither present → skipped with a warning,
+        # so the NuGet release above stays valid on its own.
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::warning::NPM_TOKEN is not set and no trusted publisher is configured; npm publish skipped."
+            exit 0
+          fi
+          npm publish --provenance --access public

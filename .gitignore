@@ -4,6 +4,10 @@ obj/
 artifacts/
 *.binlog
 
+## npm front door
+npm/.tool/
+npm/node_modules/
+
 ## NuGet
 *.nupkg
 *.snupkg

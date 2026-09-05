@@ -107,6 +107,17 @@ Binary responses (`application/pdf`, spreadsheet exports) and actions typed as `
 dotnet tool install --global Raptor21.OpenApi.Generics.Cli
 ```
 
+From a JavaScript project, use the npm front door instead — it installs the same .NET tool, pinned to
+its own version, on first run (needs a .NET SDK on PATH) and forwards every flag:
+
+```bash
+pnpm add -D @raptor21/openapi
+```
+
+```jsonc
+{ "scripts": { "generate": "raptor21-openapi https://api.example.com/swagger/v1/swagger.json -l typescript --queries --no-headers -o src/api/generated" } }
+```
+
 Point it at a file or a URL:
 
 ```bash
@@ -139,6 +150,10 @@ regenerate when you mean to and review the result like any other change.
 | `--payload-property <name>` | Envelope property holding the payload. Defaults to `data`. |
 | `--using <namespace>` | Extra `using` in the generated file. Repeatable. |
 | `--no-cancellation-tokens` | Omit the trailing `CancellationToken`. |
+| `-l, --language typescript` | Emit `types.ts` / `client.ts` (fetch) instead of C#; `--output` is then a directory. |
+| `--queries` | TypeScript: also emit `queries.ts` with TanStack Query hooks and query-key factories. |
+| `--body-name <name>` | TypeScript: name of the request-body parameter. Defaults to `request`. |
+| `--optional-body` | TypeScript: keep a body optional when the document leaves `requestBody.required` unset. By default every body is required, because Swashbuckle never sets the flag for `[FromBody]` and the server answers 400 without one. |
 
 #### Why `--path-prefix` rather than a base address
 
@@ -208,6 +223,10 @@ The projection writes these vendor extensions onto the schemas it produces:
 | `x-data-container-type` | Fully qualified type of the container. |
 | `x-data-item` | The concrete item or payload type. |
 | `x-ignore-model` | Infrastructure schema — do not emit it as a standalone model. |
+| `x-raptor21-version` | On `info`: the protocol edition the document was projected with (`"1"`). A generator refuses a major it does not implement; a document without it is read as version 1. |
+
+The full contract — every key, its type, where it may appear, how a generator reconstructs from it, and the
+compatibility rules — is [docs/Raptor21-Generics-Extensions-v1.md](docs/Raptor21-Generics-Extensions-v1.md).
 
 The `*-type` values carry language-specific type names, so a document produced by one ecosystem
 describes that ecosystem's types. Cross-ecosystem consumers share the protocol shape and map the
@@ -240,7 +259,9 @@ git push origin v0.1.0-preview.2
 ```
 
 That triggers `.github/workflows/release.yml`, which builds, packs at the tagged version, pushes the
-packages to nuget.org and opens a GitHub release with them attached. A tag carrying a suffix
+packages to nuget.org, opens a GitHub release with them attached, and then publishes `@raptor21/openapi`
+to npm at the same version (the `npm` job needs either an `NPM_TOKEN` secret or a trusted publisher
+configured for the package on npmjs.com; without both it skips with a warning). A tag carrying a suffix
 (`-preview.2`, `-rc.1`) is published as a prerelease.
 
 A tag that is not a version is rejected before anything is packed. **nuget.org is permanent** — a

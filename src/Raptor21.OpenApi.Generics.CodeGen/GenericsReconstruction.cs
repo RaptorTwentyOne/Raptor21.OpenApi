@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 
 using NJsonSchema;
-using NJsonSchema.CodeGeneration.CSharp;
 
 using NSwag;
 
@@ -24,19 +23,53 @@ namespace Raptor21.OpenApi.Generics.CodeGen;
 public sealed class GenericsReconstruction
 {
     private readonly OpenApiDocument _document;
-    private readonly RefitClientGeneratorSettings _settings;
-    private readonly CSharpTypeResolver _resolver;
+    private readonly ClientGeneratorSettingsBase _settings;
+    private readonly ITypeResolver _resolver;
     private readonly Dictionary<JsonSchema, string> _reconstructed = new();
     private readonly HashSet<string> _excluded = new(StringComparer.Ordinal);
 
     /// <summary>Analyses a document's definitions.</summary>
-    public GenericsReconstruction(OpenApiDocument document, RefitClientGeneratorSettings settings, CSharpTypeResolver resolver)
+    public GenericsReconstruction(OpenApiDocument document, ClientGeneratorSettingsBase settings, ITypeResolver resolver)
     {
         _document = document ?? throw new ArgumentNullException(nameof(document));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
 
+        ProtocolVersion = ReadProtocolVersion(document);
         Analyse();
+    }
+
+    /// <summary>
+    /// The metadata protocol version the document declares on <c>info</c> (<c>x-raptor21-version</c>), or
+    /// null for a document written before the marker existed. Both are read as version 1.
+    /// </summary>
+    public string? ProtocolVersion { get; }
+
+    /// <summary>
+    /// Reads and validates the document's protocol marker. A major version other than the one this library
+    /// implements is refused: the extensions may then carry meanings this reconstruction would misread, and
+    /// a wrong client is worse than no client.
+    /// </summary>
+    private static string? ReadProtocolVersion(OpenApiDocument document)
+    {
+        var extensions = document.Info?.ExtensionData;
+        if (extensions is null || !extensions.TryGetValue(OpenApiGenericsExtensions.Version, out var raw) || raw is null)
+            return null;
+
+        var version = raw.ToString()?.Trim();
+        if (string.IsNullOrEmpty(version))
+            return null;
+
+        var major = version!.Split('.')[0];
+        if (!string.Equals(major, OpenApiGenericsExtensions.CurrentVersion, StringComparison.Ordinal))
+        {
+            throw new NotSupportedException(
+                $"The document declares Raptor21 generics protocol version '{version}', but this generator implements " +
+                $"version {OpenApiGenericsExtensions.CurrentVersion}. Update the generator, or project the document with a matching " +
+                "Raptor21.OpenApi.Generics.AspNetCore.");
+        }
+
+        return version;
     }
 
     /// <summary>Schema names that must not become generated models.</summary>
@@ -67,7 +100,7 @@ public sealed class GenericsReconstruction
         {
             var item = actual.Item.ActualSchema;
             if (_reconstructed.TryGetValue(item, out var reconstructedItem))
-                return $"System.Collections.Generic.ICollection<{reconstructedItem}>";
+                return _resolver.Collection(reconstructedItem);
         }
 
         return _resolver.Resolve(actual, nullable ?? actual.IsNullable(SchemaType.OpenApi3), typeNameHint);

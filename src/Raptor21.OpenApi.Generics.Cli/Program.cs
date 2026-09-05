@@ -11,8 +11,27 @@ if (args.Length == 0 || args[0] is "-h" or "--help")
 }
 
 string? input = null;
-var settings = new RefitClientGeneratorSettings();
 string? output = null;
+var language = "csharp";
+
+// Shared/raw options, applied to the language-specific settings after parsing so both paths see identical
+// flag semantics.
+var ns = "GeneratedClient";
+var single = false;
+string? interfaceName = null;
+var noHeaders = false;
+var skipHeaders = new List<string>();
+var excludeTags = new List<string>();
+var payloadProperty = "data";
+string? pathPrefix = null;
+var maps = new List<(string From, string To)>();
+var usings = new List<string>();
+var noCancellationTokens = false;
+var di = false;
+string? registrationMethod = null;
+var queries = false;
+string? bodyName = null;
+var optionalBody = false;
 
 for (var i = 0; i < args.Length; i++)
 {
@@ -23,43 +42,55 @@ for (var i = 0; i < args.Length; i++)
         case "--output" or "-o":
             output = Next(args, ref i, arg);
             break;
+        case "--language" or "-l":
+            language = Next(args, ref i, arg).ToLowerInvariant();
+            break;
+        case "--queries":
+            queries = true;
+            break;
+        case "--body-name":
+            bodyName = Next(args, ref i, arg);
+            break;
+        case "--optional-body":
+            optionalBody = true;
+            break;
         case "--namespace" or "-n":
-            settings.Namespace = Next(args, ref i, arg);
+            ns = Next(args, ref i, arg);
             break;
         case "--single-interface":
-            settings.Grouping = InterfaceGrouping.Single;
+            single = true;
             break;
         case "--interface-name":
-            settings.SingleInterfaceName = Next(args, ref i, arg);
-            settings.Grouping = InterfaceGrouping.Single;
+            interfaceName = Next(args, ref i, arg);
+            single = true;
             break;
         case "--no-headers":
-            settings.ExcludeAllHeaderParameters = true;
+            noHeaders = true;
             break;
         case "--skip-header":
-            settings.ExcludedHeaderParameters.Add(Next(args, ref i, arg));
+            skipHeaders.Add(Next(args, ref i, arg));
             break;
         case "--exclude-tag":
-            settings.ExcludedTags.Add(Next(args, ref i, arg));
+            excludeTags.Add(Next(args, ref i, arg));
             break;
         case "--payload-property":
-            settings.PayloadPropertyName = Next(args, ref i, arg);
+            payloadProperty = Next(args, ref i, arg);
             break;
         case "--no-cancellation-tokens":
-            settings.GenerateCancellationTokens = false;
+            noCancellationTokens = true;
             break;
         case "--path-prefix":
-            settings.PathPrefix = Next(args, ref i, arg);
+            pathPrefix = Next(args, ref i, arg);
             break;
         case "--di":
-            settings.GenerateDependencyInjection = true;
+            di = true;
             break;
         case "--registration-method":
-            settings.RegistrationMethodName = Next(args, ref i, arg);
-            settings.GenerateDependencyInjection = true;
+            registrationMethod = Next(args, ref i, arg);
+            di = true;
             break;
         case "--using":
-            settings.AdditionalNamespaces.Add(Next(args, ref i, arg));
+            usings.Add(Next(args, ref i, arg));
             break;
         case "--map":
             {
@@ -71,7 +102,7 @@ for (var i = 0; i < args.Length; i++)
                     return 1;
                 }
 
-                settings.TypeMappings[mapping[..separator]] = mapping[(separator + 1)..];
+                maps.Add((mapping[..separator], mapping[(separator + 1)..]));
                 break;
             }
         default:
@@ -92,6 +123,24 @@ if (input is null)
     return 1;
 }
 
+if (language is not ("csharp" or "typescript"))
+{
+    Console.Error.WriteLine($"Unknown language '{language}'. Expected 'csharp' or 'typescript'.");
+    return 1;
+}
+
+if (queries && language != "typescript")
+{
+    Console.Error.WriteLine("--queries applies only to --language typescript.");
+    return 1;
+}
+
+if ((bodyName is not null || optionalBody) && language != "typescript")
+{
+    Console.Error.WriteLine("--body-name and --optional-body apply only to --language typescript.");
+    return 1;
+}
+
 try
 {
     var document = input.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
@@ -99,28 +148,107 @@ try
         ? await OpenApiDocument.FromUrlAsync(input)
         : await OpenApiDocument.FromFileAsync(input);
 
-    var code = new RefitClientGenerator(settings).Generate(document);
-
-    if (output is null)
-    {
-        Console.Out.Write(code);
-    }
-    else
-    {
-        var directory = Path.GetDirectoryName(Path.GetFullPath(output));
-        if (!string.IsNullOrEmpty(directory))
-            Directory.CreateDirectory(directory);
-
-        await File.WriteAllTextAsync(output, code, new UTF8Encoding(false));
-        Console.WriteLine($"Wrote {output}");
-    }
-
-    return 0;
+    return language == "typescript"
+        ? await GenerateTypeScript(document, output)
+        : await GenerateCSharp(document, output);
 }
 catch (Exception ex)
 {
     Console.Error.WriteLine($"Generation failed: {ex.Message}");
     return 1;
+}
+
+async Task<int> GenerateCSharp(OpenApiDocument document, string? outputPath)
+{
+    var settings = new RefitClientGeneratorSettings
+    {
+        Namespace = ns,
+        SingleInterfaceName = interfaceName ?? "IApiClient",
+        Grouping = single ? InterfaceGrouping.Single : InterfaceGrouping.ByTag,
+        GenerateCancellationTokens = !noCancellationTokens,
+        ExcludeAllHeaderParameters = noHeaders,
+        PayloadPropertyName = payloadProperty,
+        PathPrefix = pathPrefix,
+        GenerateDependencyInjection = di,
+        RegistrationMethodName = registrationMethod ?? "AddGeneratedApis",
+    };
+
+    foreach (var header in skipHeaders) settings.ExcludedHeaderParameters.Add(header);
+    foreach (var tag in excludeTags) settings.ExcludedTags.Add(tag);
+    foreach (var (from, to) in maps) settings.TypeMappings[from] = to;
+    foreach (var u in usings) settings.AdditionalNamespaces.Add(u);
+
+    var code = new RefitClientGenerator(settings).Generate(document);
+
+    if (outputPath is null)
+    {
+        Console.Out.Write(code);
+    }
+    else
+    {
+        var directory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
+
+        await File.WriteAllTextAsync(outputPath, code, new UTF8Encoding(false));
+        Console.WriteLine($"Wrote {outputPath}");
+    }
+
+    return 0;
+}
+
+async Task<int> GenerateTypeScript(OpenApiDocument document, string? outputPath)
+{
+    var settings = new TypeScriptClientGeneratorSettings
+    {
+        SingleClientName = interfaceName ?? "ApiClient",
+        Grouping = single ? InterfaceGrouping.Single : InterfaceGrouping.ByTag,
+        ExcludeAllHeaderParameters = noHeaders,
+        PayloadPropertyName = payloadProperty,
+        PathPrefix = pathPrefix,
+        GenerateQueries = queries,
+        BodyParameterName = bodyName ?? "request",
+        BodyParameterRequired = !optionalBody,
+    };
+
+    foreach (var header in skipHeaders) settings.ExcludedHeaderParameters.Add(header);
+    foreach (var tag in excludeTags) settings.ExcludedTags.Add(tag);
+    foreach (var (from, to) in maps) settings.TypeMappings[from] = to;
+
+    var result = new TypeScriptClientGenerator(settings).Generate(document);
+
+    var files = new List<(string Name, string Content)>
+    {
+        ("types.ts", result.Types),
+        ("client.ts", result.Client),
+    };
+    if (result.Queries is not null)
+        files.Add(("queries.ts", result.Queries));
+
+    if (outputPath is null)
+    {
+        // No directory to write into: emit every file to standard output with a header separator.
+        foreach (var (name, content) in files)
+        {
+            Console.Out.WriteLine($"// ==== {name} ====");
+            Console.Out.Write(content);
+            Console.Out.WriteLine();
+        }
+
+        return 0;
+    }
+
+    Directory.CreateDirectory(outputPath);
+    var encoding = new UTF8Encoding(false);
+
+    foreach (var (name, content) in files)
+    {
+        var path = Path.Combine(outputPath, name);
+        await File.WriteAllTextAsync(path, content, encoding);
+        Console.WriteLine($"Wrote {path}");
+    }
+
+    return 0;
 }
 
 static string Next(string[] args, ref int index, string option)
@@ -136,16 +264,22 @@ static void PrintUsage()
     Console.WriteLine("""
         raptor21-openapi <document> [options]
 
-          Generates a Refit client from an OpenAPI document, restoring the generic response
+          Generates a typed client from an OpenAPI document, restoring the generic response
           contracts the document carries as metadata instead of redefining them.
 
           <document>                  Path or URL of the OpenAPI document.
 
         Options
-          -o, --output <file>         Write to a file instead of standard output.
-          -n, --namespace <ns>        Namespace for generated code. Default: GeneratedClient.
-              --single-interface      Emit one interface for the whole document instead of one per tag.
-              --interface-name <name> Name for that single interface. Implies --single-interface.
+          -o, --output <path>         C#: write to a file instead of standard output.
+                                      TypeScript: a directory to write types.ts/client.ts/(queries.ts) into.
+          -l, --language <lang>       csharp (default) or typescript.
+              --queries               TypeScript only: also emit queries.ts with TanStack Query hooks.
+              --body-name <name>      TypeScript only: name of the request-body parameter. Default: request.
+              --optional-body         TypeScript only: keep a body optional when the document does not mark
+                                      it required (default treats every body as required — see README).
+          -n, --namespace <ns>        C# namespace for generated code. Default: GeneratedClient.
+              --single-interface      Emit one interface/client for the whole document instead of one per tag.
+              --interface-name <name> Name for that single interface/client. Implies --single-interface.
               --no-headers            Leave every header parameter out of generated signatures.
               --skip-header <name>    Leave one header parameter out. Repeatable.
               --exclude-tag <tag>     Skip every operation carrying this tag. Repeatable.
@@ -153,12 +287,12 @@ static void PrintUsage()
               --path-prefix <path>    Prepend this to every route, for a service reached through a
                                       gateway that mounts it under a prefix.
               --map <from>=<to>       Map a projected contract type onto a local one. Repeatable.
-              --using <namespace>     Extra using directive in the generated file. Repeatable.
-              --di                    Also emit an extension method registering every interface as a
+              --using <namespace>     C#: extra using directive in the generated file. Repeatable.
+              --di                    C#: also emit an extension method registering every interface as a
                                       Refit client. Needs Refit.HttpClientFactory in the target project.
               --registration-method <name>
-                                      Name for that method. Default: AddGeneratedApis. Implies --di.
+                                      C#: name for that method. Default: AddGeneratedApis. Implies --di.
               --no-cancellation-tokens
-                                      Omit the trailing CancellationToken parameter.
+                                      C#: omit the trailing CancellationToken parameter.
         """);
 }

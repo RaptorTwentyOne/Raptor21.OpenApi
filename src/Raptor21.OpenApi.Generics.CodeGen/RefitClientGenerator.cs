@@ -54,7 +54,7 @@ public sealed class RefitClientGenerator
         var resolver = new CSharpTypeResolver(csharpSettings);
         resolver.RegisterSchemaDefinitions(document.Definitions);
 
-        var reconstruction = new GenericsReconstruction(document, _settings, resolver);
+        var reconstruction = new GenericsReconstruction(document, _settings, new CSharpTypeResolverAdapter(resolver));
         csharpSettings.ExcludedTypeNames = reconstruction.ExcludedTypeNames.ToArray();
 
         var models = GenerateModels(document, csharpSettings, resolver);
@@ -94,7 +94,7 @@ public sealed class RefitClientGenerator
         var builder = new StringBuilder();
 
         builder.AppendLine("/// <summary>Registers every client in this document as a Refit client.</summary>");
-        builder.AppendLine($"public static class {Pascal(_settings.RegistrationMethodName)}Extensions");
+        builder.AppendLine($"public static class {Names.Pascal(_settings.RegistrationMethodName)}Extensions");
         builder.AppendLine("{");
         builder.AppendLine("    /// <summary>Adds each generated interface, letting the caller configure every client the same way.</summary>");
         builder.AppendLine("    /// <param name=\"services\">The service collection.</param>");
@@ -181,7 +181,7 @@ public sealed class RefitClientGenerator
             ? new[] { new { Name = _settings.SingleInterfaceName, Operations = (IEnumerable<OpenApiOperationDescription>)operations } }
             : operations
                 .GroupBy(PrimaryTag)
-                .Select(g => new { Name = "I" + Pascal(g.Key) + "Api", Operations = (IEnumerable<OpenApiOperationDescription>)g })
+                .Select(g => new { Name = "I" + Names.Pascal(g.Key) + "Api", Operations = (IEnumerable<OpenApiOperationDescription>)g })
                 .ToArray();
 
         var builder = new StringBuilder();
@@ -236,10 +236,10 @@ public sealed class RefitClientGenerator
         if (multipart)
             builder.AppendLine("    [Multipart]");
 
-        builder.AppendLine($"    [{Pascal(description.Method.ToString())}(\"{Route(description.Path)}\")]");
+        builder.AppendLine($"    [{Names.Pascal(description.Method.ToString())}(\"{Route(description.Path)}\")]");
 
         var returnType = ResolveReturnType(operation, reconstruction);
-        var name = UniqueMethodName(description, usedNames);
+        var name = Names.UniqueMethodName(description, usedNames);
         var parameters = BuildParameters(operation, reconstruction, multipart);
 
         builder.AppendLine($"    {returnType} {name}({string.Join(", ", parameters)});");
@@ -265,7 +265,7 @@ public sealed class RefitClientGenerator
             }
 
             var type = reconstruction.ResolveType(parameter.Schema ?? parameter.ActualSchema, parameter.Name);
-            var identifier = Camel(parameter.Name);
+            var identifier = Names.Camel(parameter.Name, IdentifierEscaper.CSharp);
 
             var rendered = parameter.Kind switch
             {
@@ -318,7 +318,7 @@ public sealed class RefitClientGenerator
 
         foreach (var property in schema.ActualProperties)
         {
-            var identifier = Camel(property.Key);
+            var identifier = Names.Camel(property.Key, IdentifierEscaper.CSharp);
             var isFile = property.Value.ActualSchema.Format == "binary";
 
             var rendered = isFile
@@ -383,131 +383,4 @@ public sealed class RefitClientGenerator
     private static string PrimaryTag(OpenApiOperationDescription description)
         => description.Operation.Tags is { Count: > 0 } tags ? tags[0] : "Default";
 
-    /// <summary>
-    /// Picks a method name that is unique within its interface.
-    /// </summary>
-    /// <remarks>
-    /// Candidates are tried from most to least natural: the document's operationId, then the route's action
-    /// segment, then the same prefixed by the HTTP verb, then qualified by the parameters it takes. Two
-    /// operations on one route — a GET and a DELETE of the same resource — resolve at the verb step. The
-    /// numeric suffix at the end is a guarantee of uniqueness rather than a name anyone should see; reaching it
-    /// means the document could not distinguish the operations, and giving them operationIds is the fix.
-    /// </remarks>
-    private string UniqueMethodName(OpenApiOperationDescription description, HashSet<string> used)
-    {
-        string? fallback = null;
-
-        foreach (var candidate in NameCandidates(description))
-        {
-            fallback ??= candidate;
-
-            if (used.Add(candidate))
-                return candidate;
-        }
-
-        var baseName = fallback ?? "Invoke";
-        var index = 2;
-
-        while (!used.Add(baseName + index.ToString(CultureInfo.InvariantCulture)))
-            index++;
-
-        return baseName + index.ToString(CultureInfo.InvariantCulture);
-    }
-
-    private static IEnumerable<string> NameCandidates(OpenApiOperationDescription description)
-    {
-        if (!string.IsNullOrWhiteSpace(description.Operation.OperationId))
-            yield return Pascal(description.Operation.OperationId!);
-
-        var fallback = FallbackName(description);
-        yield return fallback;
-
-        var verb = Pascal(description.Method.ToString());
-        var verbPrefixed = fallback.StartsWith(verb, StringComparison.Ordinal) ? null : verb + fallback;
-
-        if (verbPrefixed is not null)
-            yield return verbPrefixed;
-
-        var arguments = description.Operation.ActualParameters
-            .Where(p => p.Kind == OpenApiParameterKind.Path || p.Kind == OpenApiParameterKind.Query)
-            .Select(p => Pascal(p.Name))
-            .ToArray();
-
-        if (arguments.Length == 0)
-            yield break;
-
-        var qualifier = "By" + string.Join("And", arguments);
-
-        yield return fallback + qualifier;
-
-        if (verbPrefixed is not null)
-            yield return verbPrefixed + qualifier;
-    }
-
-    /// <summary>
-    /// Builds a method name from the route.
-    /// </summary>
-    /// <remarks>
-    /// A route like <c>/Languages/GetLanguages</c> already names the action, so prefixing the HTTP verb again
-    /// would produce <c>GetLanguagesGetLanguages</c>. When the route has a controller segment and an action
-    /// segment, the action segment alone is the name. A route that is only a resource — <c>/Countries</c> —
-    /// carries no verb of its own, so there the HTTP method supplies it.
-    /// </remarks>
-    private static string FallbackName(OpenApiOperationDescription description)
-    {
-        var segments = description.Path
-            .Split(['/'], StringSplitOptions.RemoveEmptyEntries)
-            .Where(s => !s.StartsWith("{", StringComparison.Ordinal))
-            .Select(Pascal)
-            .Where(s => s.Length > 0)
-            .ToArray();
-
-        if (segments.Length >= 2)
-            return segments[^1];
-
-        var resource = segments.Length == 1 ? segments[0] : string.Empty;
-        return Pascal(description.Method.ToString()) + resource;
-    }
-
-    private static string Pascal(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return string.Empty;
-
-        var parts = value.Split(['_', '-', ' ', '.', '/'], StringSplitOptions.RemoveEmptyEntries);
-        var builder = new StringBuilder();
-
-        foreach (var part in parts)
-        {
-            var cleaned = new string(part.Where(char.IsLetterOrDigit).ToArray());
-            if (cleaned.Length == 0)
-                continue;
-
-            builder.Append(char.ToUpper(cleaned[0], CultureInfo.InvariantCulture));
-            builder.Append(cleaned.Substring(1));
-        }
-
-        return builder.ToString();
-    }
-
-    private static string Camel(string value)
-    {
-        var pascal = Pascal(value);
-        if (pascal.Length == 0)
-            return "value";
-
-        var camel = char.ToLower(pascal[0], CultureInfo.InvariantCulture) + pascal.Substring(1);
-        return Keywords.Contains(camel) ? "@" + camel : camel;
-    }
-
-    private static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
-    {
-        "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked", "class", "const",
-        "continue", "decimal", "default", "delegate", "do", "double", "else", "enum", "event", "explicit",
-        "extern", "false", "finally", "fixed", "float", "for", "foreach", "goto", "if", "implicit", "in", "int",
-        "interface", "internal", "is", "lock", "long", "namespace", "new", "null", "object", "operator", "out",
-        "override", "params", "private", "protected", "public", "readonly", "ref", "return", "sbyte", "sealed",
-        "short", "sizeof", "stackalloc", "static", "string", "struct", "switch", "this", "throw", "true", "try",
-        "typeof", "uint", "ulong", "unchecked", "unsafe", "ushort", "using", "virtual", "void", "volatile", "while",
-    };
 }

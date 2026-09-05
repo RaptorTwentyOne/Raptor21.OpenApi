@@ -39,6 +39,10 @@ jobs:
       - name: Pack
         run: dotnet pack -c Release --no-build -o artifacts
 
+      - name: npm front door parses and reports its version
+        # No install here (it would need the tool from nuget.org); parse + help path is what CI can check.
+        run: node --check npm/bin/raptor21-openapi.js
+
       - name: Upload packages
         uses: actions/upload-artifact@v4
         with:

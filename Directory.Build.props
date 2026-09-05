@@ -11,7 +11,7 @@
     <PropertyGroup Label="Package">
         <Authors>RaptorTwentyOne</Authors>
         <Product>Raptor21.OpenApi</Product>
-        <VersionPrefix>0.1.0</VersionPrefix>
+        <VersionPrefix>0.2.0</VersionPrefix>
         <!-- The development version, used by a local `dotnet pack`. A release takes its version from the git
              tag instead (see .github/workflows/release.yml), so a published package always traces back to
              exactly one commit.
@@ -19,8 +19,11 @@
              preview.1 was built and consumed before this repository existed, from source without the
              path-prefix, di and exclude-tag options. Reusing the number would mean two different generators
              answering to one version, which is how a build quietly produces a different file than its flags
-             describe. -->
-        <VersionSuffix Condition="'$(VersionSuffix)' == ''">preview.2</VersionSuffix>
+             describe.
+
+             0.2.0-preview.1 adds the TypeScript emitter (types/client/queries), the request-body and
+             multipart conventions, the x-raptor21-version protocol marker and the test project. -->
+        <VersionSuffix Condition="'$(VersionSuffix)' == ''">preview.1</VersionSuffix>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageProjectUrl>https://github.com/RaptorTwentyOne/Raptor21.OpenApi</PackageProjectUrl>

@@ -16,4 +16,7 @@
   <Folder Name="/samples/">
     <Project Path="samples/Raptor21.OpenApi.Generics.Sample/Raptor21.OpenApi.Generics.Sample.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Raptor21.OpenApi.Generics.Tests/Raptor21.OpenApi.Generics.Tests.csproj" />
+  </Folder>
 </Solution>

@@ -1,0 +1,129 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "Uploads API",
+    "version": "1.0",
+    "x-raptor21-version": "1"
+  },
+  "paths": {
+    "/files": {
+      "post": {
+        "tags": ["Files"],
+        "summary": "Uploads one file with an optional note and tags.",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": ["file"],
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "note": { "type": "string" },
+                  "tags": { "type": "array", "items": { "type": "string" } },
+                  "attachments": { "type": "array", "items": { "type": "string", "format": "binary" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/UploadResultDto" } }
+            }
+          }
+        }
+      }
+    },
+    "/files/{id}/rename": {
+      "post": {
+        "tags": ["Files"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/RenameRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/UploadResultDto" } }
+            }
+          }
+        }
+      }
+    },
+    "/files/{id}/note": {
+      "post": {
+        "tags": ["Files"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/NoteRequest" } }
+          }
+        },
+        "responses": { "204": { "description": "No Content" } }
+      }
+    },
+    "/files/search": {
+      "post": {
+        "tags": ["Files"],
+        "parameters": [
+          { "name": "request", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/SearchRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/UploadResultDto" } }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UploadResultDto": {
+        "required": ["id", "name"],
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "size": { "type": "integer", "format": "int64" }
+        },
+        "additionalProperties": false
+      },
+      "RenameRequest": {
+        "required": ["name"],
+        "type": "object",
+        "properties": { "name": { "type": "string" } },
+        "additionalProperties": false
+      },
+      "NoteRequest": {
+        "type": "object",
+        "properties": { "note": { "type": "string", "nullable": true } },
+        "additionalProperties": false
+      },
+      "SearchRequest": {
+        "type": "object",
+        "properties": { "term": { "type": "string", "nullable": true } },
+        "additionalProperties": false
+      }
+    }
+  }
+}

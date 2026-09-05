@@ -1,0 +1,101 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "Hook Naming API",
+    "version": "1.0"
+  },
+  "paths": {
+    "/api/customers/{id}": {
+      "get": {
+        "tags": [ "CustomerDetail" ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CustomerDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/push/customers": {
+      "get": {
+        "tags": [ "Notifications" ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CustomerDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/push": {
+      "post": {
+        "tags": [ "Notifications" ],
+        "responses": {
+          "204": { "description": "No Content" }
+        }
+      }
+    },
+    "/api/search/widgets": {
+      "get": {
+        "tags": [ "Search" ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CustomerDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CustomerDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string", "nullable": true }
+        }
+      }
+    }
+  }
+}

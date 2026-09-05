@@ -35,6 +35,7 @@ public static class OpenApiGenericsSwaggerGenExtensions
         // what makes the schema filter run for the envelope type and stamp it.
         swaggerGenOptions.OperationFilter<ApiGenericsEnvelopeOperationFilter>(options);
         swaggerGenOptions.SchemaFilter<ApiGenericsSchemaFilter>(options);
+        swaggerGenOptions.DocumentFilter<ApiGenericsVersionDocumentFilter>();
 
         return swaggerGenOptions;
     }

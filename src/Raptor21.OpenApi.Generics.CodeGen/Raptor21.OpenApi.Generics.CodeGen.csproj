@@ -14,7 +14,15 @@
 
     <ItemGroup>
         <PackageReference Include="NJsonSchema.CodeGeneration.CSharp" Version="11.6.1" />
+        <PackageReference Include="NJsonSchema.CodeGeneration.TypeScript" Version="11.6.1" />
         <PackageReference Include="NSwag.Core" Version="14.7.1" />
+        <PackageReference Include="Scriban" Version="7.2.6" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="Templates/client.ts.scriban" LogicalName="client.ts.scriban" WithCulture="false" />
+        <EmbeddedResource Include="Templates/types.ts.scriban" LogicalName="types.ts.scriban" WithCulture="false" />
+        <EmbeddedResource Include="Templates/queries.ts.scriban" LogicalName="queries.ts.scriban" WithCulture="false" />
     </ItemGroup>
 
     <ItemGroup>
