@@ -109,7 +109,7 @@ jobs:
 
       - name: Stamp the tag version into package.json
         working-directory: npm
-        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
 
       - name: Smoke-test the bin against the just-published tool
         working-directory: npm

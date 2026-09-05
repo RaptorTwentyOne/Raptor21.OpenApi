@@ -4,7 +4,8 @@ obj/
 artifacts/
 *.binlog
 
-## npm front door
+## npm front door (its bin/ is source, not build output)
+!npm/bin/
 npm/.tool/
 npm/node_modules/
 

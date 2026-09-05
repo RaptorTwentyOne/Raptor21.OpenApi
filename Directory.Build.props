@@ -21,6 +21,9 @@
              answering to one version, which is how a build quietly produces a different file than its flags
              describe.
 
+             npm/package.json carries the same version by hand (the git-hosted install path reads it to pick
+             the tool version); the release workflow re-stamps it from the tag.
+
              0.2.0-preview.1 adds the TypeScript emitter (types/client/queries), the request-body and
              multipart conventions, the x-raptor21-version protocol marker and the test project. -->
         <VersionSuffix Condition="'$(VersionSuffix)' == ''">preview.1</VersionSuffix>

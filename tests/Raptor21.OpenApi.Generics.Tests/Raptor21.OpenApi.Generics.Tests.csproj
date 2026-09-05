@@ -5,6 +5,10 @@
         <RootNamespace>Raptor21.OpenApi.Generics.Tests</RootNamespace>
         <AssemblyName>Raptor21.OpenApi.Generics.Tests</AssemblyName>
         <IsPackable>false</IsPackable>
+        <!-- SnapshotTester locates Fixtures/ and Snapshots/ through [CallerFilePath]. A CI build maps source
+             paths to /_/ (deterministic source paths for Source Link), which would turn that into a path that
+             exists nowhere; the test assembly is never shipped, so real paths cost nothing here. -->
+        <DeterministicSourcePaths>false</DeterministicSourcePaths>
         <IsPublishable>false</IsPublishable>
         <!-- The generated-output snapshots are committed as plain text and compared verbatim; nothing here is
              shipped, so documentation and warnings-as-errors would only add noise. -->
